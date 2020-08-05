@@ -1,0 +1,125 @@
+SDC
+
+(3/31/2020-4/2/2020)
+
+-cloned, created new repo, removed origin, add new repo as origin
+
+-initialized repo to be able to render service for comments
+  -had issues seeding mySQL DB, tried reinstalling mySQL, but it seemed the script in the seed file failed to create a new database, so I had to create it manually and it solved any issues there.
+  -had to change URL back to localhost from previous's owner's deployed IP address
+
+-added a two API routes to support put and delete CRUD operations and created a README describing the different API routes and CRUD operations.
+
+-setting up generator file for PostgresSQL DB
+  -setting up PostGreSQL
+    -install PostgresSQL homebrew (brew install postgresql)
+    -to start postgresql server (pg_ctl -D /usr/local/var/postgres start)
+    -to stop server (pg_ctl -D /usr/local/var/postgres stop)
+    -create a new db (createdb DBname)
+    -delete a db (dropdb DBname)
+    -start up psql (psql DBname)
+    -to quit psql (/q)
+    -can run psql postgres to get to the postgres terminal and \l to list all databases
+    -\conninfo will show you the information to connect to the current database
+    -when opening a table make sure you add the table name in quotes
+
+  -create table generator script
+    -used previous table setup for mySQL db and worked with postgres, just had to make a few change to headers
+    -set up a new script with the updated table setup for postgres
+
+  -create data generator script that writes a new csv file for each table
+    -took out a few data points that were not used or I felt should be kept static to save the stress when creating 10m data points.
+    -followed the layout from https://stackoverflow.com/questions/18932488/how-to-use-drain-event-of-stream-writable-in-node-js
+    -created a new script to be able to generate CSV file
+    -after verifying that the csv file was created as intended, I loaded it into the database
+      -used COPY "TABLE NAME" (columns) FROM 'ABSOLUTE PATH TO CSV FILE' DELIMITER ',' CSV HEADER;
+    -repeat for each table
+    -when using postgres/sequelize/csv files loading, make sure to not use caps to define tables, will error out saying column is not defined
+
+  -updated README to show instructions on how to set up POSTGRESQL database
+  -for some odd reason, im not sure why my postgresql table's id did not start incrementing from 1
+
+-setting up data generator for Cassandra
+  -setting up Cassandra
+    -have installed java,python
+    -install cassandra through homebrew (brew install cassandra)
+    -start up cassandra (cassandra -f)
+    -in a different terminal, pull up cassandra terminal (cqlsh)
+    -exit cqlsh terminal (EXIT)
+    -install cassandra-driver to be able to used code written in nodeJS (npm install cassandra-driver)
+    -create keyspace comments CREATE KEYSPACE keyspace_name
+    -create each table, but where you specify primary key, it will only show unique values
+    -copy each csv into tables (took alot longer than it did for postgresql)
+    -even though cassandra is structured like a sql database, none of the tables have any relation to one another.
+
+-setting up image downloader script (all async code, must use promises)
+  -created an axios get request to an image api that was able to grab 80 pictures at once
+    -after the get request, grab the .jpg file of image size I wanted
+    -run the image downloader on the .jpg file url
+  -and run this script for 13 other pages to grab a total of ~1000 images
+  -make sure to keep track of an index to be able to save each image in file system uniquely
+  -upload all images to s3 bucket
+
+-run query times for both databases
+  -for cassandra you TURN TRACING ON and then run query and it will show you statistics afterwards
+  -for postgresql you put explain analyze before your query and it will show statistics
+
+-recreate all csv files to have a more variety of choices for each data points
+  -exmaple instead of 12 pics from before, choose from 1000
+  -most of other ones just use faker
+
+-updated API routes and some client side code to support the new database
+  -ran into an issue that took hours to overcome was because my server was trying to connect to mysql because of a require line at the top of the page.
+
+-optimizing postgresql
+  -first optimization was made on my comments table because it took a long time to retrieve data, but indexing significantly sped up the process. (took over 10s to be able to grab comments, but after indexing it takes sub 50ms to grab any comments from a song_id)
+    -specify which column you are grabbing the data and add a b-tree index
+      -create index index_name ON table_name(column)
+
+-stress testing using newrelic
+  -simple install newrelic, connect service by adding require('newrelic') on server index.js
+  -used auxillery to test
+    -first install artillery npm install -g artillery
+    -create .yml file to state params
+    -then run artillery run .yml file
+
+-stress tested proxy server as well
+  -dont forget to turn on server for postgresql
+  -repeated same steps for server except changed port number and where get location
+
+-deploying dbms
+  -start new ec2 instance and install postgresql
+  -accessing ec2 without connect button
+    -if using new keypair, change restrictions
+      -ls -l to check permissions
+      -chmod 600 filepath to .pem file
+    -ssh -i filepath to .pem file ubuntu@DNSlinktoinstance (ubuntu)
+                                  ec2-user (amazon AMI)
+  -installing psql on ubuntu
+    -sudo apt update
+    -sudo apt install postgresql postgresql-contrib
+  -installing psql with AWS amazon
+    -sudo yum update
+    -sudo yum install postgresql postgresql-server postgresql-devel postgresql-contrib postgresql-docs
+  -create a new user with sudo su - postgres -c "createuser -s (superuser) anthony -W"
+  -create a new db sudo su - postgres -c "createdb sdc_comments"
+  -grant privileges to new user
+    -sudo -u postgres psql
+    -grant all privileges on database sdc_comments to anthony;
+  -enable remote access to psotgresql server from another machine
+    -sudo vim /etc/postgresql/10/main/postgresql.conf
+    -add listen_addresses = '*' to connections and authentication section
+    -save and reset with sudo service postgresql restart
+  -lastly configure server to accept remote connections
+    -sudo vim /etc/postgresql/10/main/pg_hba.conf
+    -add a case for new user
+      -host all (all databases) anthony (user) 0.0.0.0/0 (any location) md5 (password)
+    -reset with sudo service postgresql restart
+  -setup password for user to access from another machine
+    -sudo -u postgres psql
+    -ALTER USER anthony WITH PASSWORD 'spring2020';
+  -connect from other machine
+    -psql -h (ip_address of where you want to connect) -p 5432 -U anthony sdc_comments
+    -will then prompt you to insert password
+  -ran into an issue when seeding my db instance, only has 8gb of storage and with postgresql installation and the csv files I had, I hit the cap before being able to load everything in the database
+    -to solve this I had to create separate csv files for my comments csv and load each one individually and then delete each file before moving on to next one.
