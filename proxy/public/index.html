@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="icon" href="https://fec-comments-images.s3.us-east-2.amazonaws.com/iconfinder_Soundcloud-1_174237.png">
+    <title>Soundcloud</title>
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+
+  </head>
+  <body>
+
+    <div id="app">
+      <div class="header" id="myHeader">
+      </div>
+      <div id="MediaFeed"></div>
+      <div id="CommentsFeedModule"></div>
+      <div id="sidebar"></div>
+    </div>
+
+    <div id="footer"></div>
+
+    <script src="http://34.203.236.60:3005/bundle.js"></script>
+    <!-- <script src="http://52.90.9.135:4444/bundle.js"></script>
+    <script src="http://3.21.207.156:3305/main.js"></script>
+    <script src="http://3.15.24.104:4000/bundle.js"></script> -->
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+    <script>
+      // When the user scrolls the page, execute myFunction
+      window.onscroll = function() {myFunction()};
+
+      // Get the header
+      var header = document.getElementById("myHeader");
+
+      // Get the offset position of the navbar
+      var sticky = header.offsetTop;
+
+      // Add the sticky class to the header when you reach its scroll position. Remove "sticky" when you leave the scroll position
+      function myFunction() {
+        if (window.pageYOffset > sticky) {
+          header.classList.add("sticky");
+        } else {
+          header.classList.remove("sticky");
+        }
+      }
+
+    </script>
+
+  </body>
+</html>
